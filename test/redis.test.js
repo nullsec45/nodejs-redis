@@ -78,7 +78,7 @@ describe.skip("list", () =>{
    }); 
 });
 
-describe("set", () =>{
+describe.skip("set", () =>{
     let redis=null;
 
     beforeEach(async() => {
@@ -103,4 +103,61 @@ describe("set", () =>{
    });
 });
 
-  
+describe.skip("sorted set",  () => {
+    let redis=null;
+
+    beforeEach(async() => {
+        redis=_initialRedis()
+    });
+
+    afterEach(async() => {
+        await redis.del("names"); 
+        await redis.quit();
+    });
+
+    it("should support sorted set", async() => {
+        await redis.zadd("names", 100,"Fajar");
+        await redis.zadd("names", 95,"Entong");
+        await redis.zadd("names", 90,"Joko");
+
+        expect(await redis.zcard("names")).toBe(3);
+        const names=await redis.zrange("names",0,-1);
+        expect(names).toEqual(["Joko","Entong","Fajar"]);
+
+        expect(await redis.zpopmax("names")).toEqual(["Fajar", "100"]);
+        expect(await redis.zpopmax("names")).toEqual(["Entong", "95"]);
+        expect(await redis.zpopmax("names")).toEqual(["Joko", "90"]);
+        
+        await redis.del("names");
+    });
+});
+
+describe("hash",  () => {
+    let redis=null;
+
+    beforeEach(async() => {
+        redis=_initialRedis()
+    });
+
+    afterEach(async() => {
+        await redis.del("user:1"); 
+        await redis.quit();
+    });
+
+    it("should support hash", async() => {
+        await redis.hset("user:1", {
+            "id" : "1",
+            "name" : "fajar",
+            "email" : "fajar@gmail.com"
+        });
+
+        const user=await redis.hgetall("user:1");
+
+
+        expect(user).toEqual({
+            "id" : "1",
+            "name" : "fajar",
+            "email" : "fajar@gmail.com"
+        });
+    });
+});
