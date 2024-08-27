@@ -132,7 +132,7 @@ describe.skip("sorted set",  () => {
     });
 });
 
-describe("hash",  () => {
+describe.skip("hash",  () => {
     let redis=null;
 
     beforeEach(async() => {
@@ -159,5 +159,76 @@ describe("hash",  () => {
             "name" : "fajar",
             "email" : "fajar@gmail.com"
         });
+    });
+});
+
+describe.skip("geo point",  () => {
+    let redis=null;
+
+    beforeEach(async() => {
+        redis=_initialRedis()
+    });
+
+    afterEach(async() => {
+        await redis.del("sellers");
+        await redis.quit();
+    });
+
+    it("should support geo point", async() => {
+        await redis.geoadd("sellers",  106.822673, -6.177616, "Toko A");
+        await redis.geoadd("sellers",  106.820646, -6.175366, "Toko B");
+
+        const distance=await redis.geodist("sellers","Toko A","Toko B", "KM");
+        expect(distance).toBe(String(0.3361));
+
+        const result=await redis.geosearch("sellers","fromlonlat",  106.822443, -6.176966, "byradius", 5, "KM");
+        expect(result).toEqual(["Toko A", "Toko B"]);
+    });
+});
+
+describe.skip("hyper log log",  () => {
+    let redis=null;
+
+    beforeEach(async() => {
+        redis=_initialRedis()
+    });
+
+    afterEach(async() => {
+        await redis.del("visitors");
+        await redis.quit();
+    });
+
+    it("should support geo point", async() => {
+        await redis.pfadd("visitors","fajar","rama","entong");
+        await redis.pfadd("visitors","fajar","mulyono","joko");
+        await redis.pfadd("visitors","rully","mulyono","joko", "budie tolol","jokowi tolol");
+
+        const total=await redis.pfcount("visitors");
+        expect(total).toBe(8);
+    });
+});
+
+describe("pipeline",  () => {
+    let redis=null;
+
+    beforeEach(async() => {
+        redis=_initialRedis()
+    });
+
+    afterEach(async() => {
+        await redis.del("name");
+        await redis.del("address");
+        await redis.quit();
+    });
+
+    it("should support pipeline", async() => {
+      const pipelie=redis.pipeline();
+      pipelie.setex("name",2,"Fajar");
+      pipelie.setex("address",2,"Indonesia");
+
+      await pipelie.exec();
+
+      expect(await redis.get("name")).toBe("Fajar");
+      expect(await redis.get("address")).toBe("Indonesia");
     });
 });
