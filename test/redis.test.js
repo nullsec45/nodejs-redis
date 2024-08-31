@@ -208,7 +208,7 @@ describe.skip("hyper log log",  () => {
     });
 });
 
-describe("pipeline",  () => {
+describe.skip("pipeline",  () => {
     let redis=null;
 
     beforeEach(async() => {
@@ -231,4 +231,91 @@ describe("pipeline",  () => {
       expect(await redis.get("name")).toBe("Fajar");
       expect(await redis.get("address")).toBe("Indonesia");
     });
+});
+
+describe.skip("transaction", () => {
+    let redis=null;
+
+    beforeEach(async() => {
+        redis=_initialRedis()
+    });
+
+    afterEach(async() => {
+        await redis.del("name");
+        await redis.del("address");
+        await redis.quit();
+    });
+
+    it("sholud support transaction", async() => {
+        const transaction=redis.multi();
+
+        transaction.setex("name", 10, "Fajar");
+        transaction.setex("address", 10, "Indonesia");
+
+        await transaction.exec();
+    });
+});
+
+describe.skip("stream", () => {
+    let redis=null;
+
+    beforeEach(async() => {
+        redis=_initialRedis()
+    });
+
+    afterEach(async() => {
+        // await redis.del("members");
+
+        await redis.quit();
+    });
+
+    it("sholud support publish to stream", async() => {
+        for(let i=0;i<10;i++){
+            await redis.xadd("members","*","name",`Fajar ${i} `, "address","Indonesia");
+        }
+    });
+
+    it("should support consumer group stream", async() => {
+        await redis.xgroup("CREATE","members","group-1","0");
+        await redis.xgroup("CREATECONSUMER","members","group-1","consumer-1");
+        await redis.xgroup("CREATECONSUMER","members","group-1","consumer-2");
+    });
+
+    it("should can consume create", async () => {
+        const result=await redis.xreadgroup("GROUP", "group-1","consumer-1","COUNT", 2, "BLOCK", 3000, "STREAMS","members",">");
+        expect(result).not.toBeNull();
+
+        console.info(JSON.stringify(result,null,2));
+
+    })
+});
+
+describe("pubsub", () => {
+    let redis=null;
+
+    beforeEach(async() => {
+        redis=_initialRedis()
+    });
+
+    afterEach(async() => {
+        // await redis.del("members");
+
+        await redis.quit();
+    });
+
+    it("should can subcribe pubsub", async() => {
+        redis.subscribe("channel-1");
+        redis.on("message", (channel, message) => {
+            console.info(`Receive message from channel ${channel} with message ${message}`);
+        });
+
+        // wait 60 seconds
+        // await new Promise(resolve => setTimeout(resolve, 3000));
+    });
+
+    it("should can publish to pubsub", async() => {
+        for(let i=0;i < 10;i++){
+            await redis.publish("channel-1", `Hello World ${i}`);
+        }
+    })
 });
